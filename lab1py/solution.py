@@ -4,6 +4,7 @@ from collections import deque
 from queue import PriorityQueue
 
 start = time.time()
+measure_time = False
 
 alg_name_dict = {'bfs': 'BFS',
                  'ucs': 'UCS',
@@ -19,6 +20,7 @@ def create_parser():
     parser.add_argument('--h', metavar='heuristic_descriptor')
     parser.add_argument('--check-optimistic', action='store_true')
     parser.add_argument('--check-consistent', action='store_true')
+    parser.add_argument('--t', action='store_true')
 
     return parser
 
@@ -82,7 +84,8 @@ def bfs(initial_state: str, goal_states: set, state_dict: dict, *_):
             if child_name in goal_states:
                 path, cost = backtrace(
                     initial_state, child_name, parent_dict)
-                print(time.time() - start)
+                if measure_time:
+                    print(f'Time elapsed: {time.time() - start}')
                 return cost, path, len(path), len(visited)
     exit(1)
 
@@ -101,7 +104,8 @@ def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
         if current_state_name in goal_states:
             path, cost = backtrace(
                 initial_state, current_state_name, parent_dict)
-            print(time.time() - start)
+            if measure_time:
+                print(f'Time elapsed: {time.time() - start}')
             return cost, path, len(path), len(visited)
 
         children = state_dict[current_state_name]
@@ -135,7 +139,8 @@ def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path
         if current_state_name in goal_states:
             path, cost = backtrace(
                 initial_state, current_state_name, parent_dict)
-            print(time.time() - start)
+            if measure_time:
+                print(f'Time elapsed: {time.time() - start}')
             return cost, path, len(path), len(visited)
 
         children = state_dict[current_state_name]
@@ -168,7 +173,7 @@ def check_optimistic(goal_states, state_dict, heuristic_path):
                     f'[CONDITION]: [OK] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
             else:
                 print(
-                    f'[CONDITION]: [ERR] h({state}) <= h* {heuristic_cost} <= {real_cost}')
+                    f'[CONDITION]: [ERR] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
                 optimistic = False
 
     if optimistic:
@@ -177,7 +182,7 @@ def check_optimistic(goal_states, state_dict, heuristic_path):
         print('[CONCLUSION]: Heuristic is not optimistic.')
 
 
-def check_consistent(initial_state, state_dict, heuristic_path):
+def check_consistent(state_dict, heuristic_path):
     heuristic_dict = generate_heuristic_dict(heuristic_path)
     print(f'# HEURISTIC-CONSISTENT {heuristic_path}')
     consistent = True
@@ -190,7 +195,7 @@ def check_consistent(initial_state, state_dict, heuristic_path):
                     f'[CONDITION]: [OK] h({state}) <= h({child_name}) + c: {heuristic_cost_parent} <= {heuristic_cost_child} + {child_cost}')
             else:
                 print(
-                    f'[CONDITION]: [OK] h({state}) <= h({child_name}) + c: {heuristic_cost_parent} <= {heuristic_cost_child} + {child_cost}')
+                    f'[CONDITION]: [ERR] h({state}) <= h({child_name}) + c: {heuristic_cost_parent} <= {heuristic_cost_child} + {child_cost}')
                 consistent = False
 
     if consistent:
@@ -202,6 +207,7 @@ def check_consistent(initial_state, state_dict, heuristic_path):
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
+    measure_time = args.t
 
     if args.alg == 'astar' and not args.h:
         parser.error('--alg astar requires --h heuristic_descriptor')
@@ -211,7 +217,7 @@ if __name__ == '__main__':
         sort_nodes=True if args.check_optimistic or args.check_consistent else False)
 
     if args.check_consistent:
-        check_consistent(initial_state, state_dict, args.h)
+        check_consistent(state_dict, args.h)
     elif args.check_optimistic:
         check_optimistic(goal_states, state_dict, args.h)
     else:

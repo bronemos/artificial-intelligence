@@ -1,2 +1,4 @@
 .vscode
-lab1py/lab1_files
+lab1_files
+autograder
+*.zip
