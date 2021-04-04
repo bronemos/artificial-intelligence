@@ -1,15 +1,20 @@
 import argparse
+from os import stat
 import time
 from collections import deque
 from queue import PriorityQueue
 
 start = time.time()
 
+alg_name_dict = {'bfs': 'BFS',
+                 'ucs': 'UCS',
+                 'astar': 'A-STAR'}
+
 
 def create_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--alg', required=True, metavar='algorithm',
+    parser.add_argument('--alg', metavar='algorithm',
                         choices=['bfs', 'ucs', 'astar'])
     parser.add_argument('--ss', metavar='state_descriptor', required=True)
     parser.add_argument('--h', metavar='heuristic_descriptor')
@@ -19,8 +24,10 @@ def create_parser():
     return parser
 
 
-def print_output(alg, found_solution, states_visited, path_length, path_cost, path):
-    print(f'# {alg}\n'
+def print_output(alg, found_solution, states_visited, path_length, path_cost, path, heuristic=None):
+    title = alg_name_dict[alg] if not heuristic else ' '.join(
+        [alg_name_dict[alg], heuristic])
+    print(f'# {title}\n'
           f'[FOUND_SOLUTION]: {found_solution}\n'
           f'[STATES_VISITED]: {states_visited}\n'
           f'[PATH_LENGTH]: {path_length}\n'
@@ -70,7 +77,7 @@ def bfs(initial_state: str, goal_states: set, state_dict: dict, *_):
                 path, cost = backtrace(
                     initial_state, child_name, parent_dict)
                 print(time.time() - start)
-                print_output('BFS', 'yes', len(visited), len(path), cost, path)
+                return cost, path, len(path), len(visited)
 
 
 def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
@@ -83,11 +90,12 @@ def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
     while open_list:
         current_state_cost, current_state_name = open_list.get()
         visited.add(current_state_name)
+
         if current_state_name in goal_states:
             path, cost = backtrace(
                 initial_state, current_state_name, parent_dict)
             print(time.time() - start)
-            print_output('UCS', 'yes', len(visited), len(path), cost, path)
+            return cost, path, len(path), len(visited)
 
         children = state_dict[current_state_name]
 
@@ -103,17 +111,83 @@ def generate_heuristic_dict(heuristic_path: str):
         return {k: float(v) for k, v in [x.split(': ') for x in f.readlines() if x[0] != '#']}
 
 
-def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path: str, check_consistent, check_optimistic):
+def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path: str):
     heuristic_dict = generate_heuristic_dict(heuristic_path)
+
     open_list = PriorityQueue()
     open_list.put((0 + heuristic_dict[initial_state], initial_state))
+    parent_dict = dict()
+    total_cost_dict = dict()
     visited = set()
 
     while open_list:
-        current_state = open_list.get()
-        visited.add(current_state[1])
-        if current_state[1] in goal_states:
-            pass
+        current_state_cost, current_state_name = open_list.get()
+        visited.add(current_state_name)
+
+        if current_state_name in goal_states:
+            path, cost = backtrace(
+                initial_state, current_state_name, parent_dict)
+            print(time.time() - start)
+            return cost, path, len(path), len(visited)
+
+        children = state_dict[current_state_name]
+
+        for child_name, child_cost in children:
+            if child_name not in visited:
+                g = current_state_cost - \
+                    heuristic_dict[current_state_name] + child_cost
+                h = heuristic_dict[child_name]
+                f = g + h
+
+                if child_name not in total_cost_dict or g < total_cost_dict[child_name]:
+                    total_cost_dict[child_name] = g
+                    parent_dict[child_name] = (current_state_name, child_cost)
+                    open_list.put((f, child_name))
+
+
+def check_optimistic(goal_states, state_dict, heuristic_path):
+    heuristic_dict = generate_heuristic_dict(heuristic_path)
+    print(f'# HEURISTIC-OPTIMISTIC {heuristic_path}')
+    optimistic = True
+
+    for state in state_dict:
+        if state not in goal_states:
+            real_cost, *_ = ucs(state, goal_states, state_dict)
+            heuristic_cost = heuristic_dict[state]
+            if heuristic_cost <= real_cost:
+                print(
+                    f'[CONDITION]: [OK] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
+            else:
+                print(
+                    f'[CONDITION]: [ERR] h({state}) <= h* {heuristic_cost} <= {real_cost}')
+                optimistic = False
+
+    if optimistic:
+        print('[CONCLUSION]: Heuristic is optimistic.')
+    else:
+        print('[CONCLUSION]: Heuristic is not optimistic.')
+
+
+def check_consistent(initial_state, state_dict, heuristic_path):
+    heuristic_dict = generate_heuristic_dict(heuristic_path)
+    print(f'# HEURISTIC-CONSISTENT {heuristic_path}')
+    consistent = True
+    for state, children in state_dict:
+        for child_name, child_cost in children:
+            heuristic_cost_parent = heuristic_dict[state]
+            heuristic_cost_child = heuristic_dict[child_name]
+            if heuristic_cost_parent <= child_cost + heuristic_cost_child:
+                print(
+                    f'[CONDITION]: [OK] h({state}) <= h({child_name}) + c: {heuristic_cost_parent} <= {heuristic_cost_child} + {child_cost}')
+            else:
+                print(
+                    f'[CONDITION]: [OK] h({state}) <= h({child_name}) + c: {heuristic_cost_parent} <= {heuristic_cost_child} + {child_cost}')
+                consistent = False
+
+    if consistent:
+        print('[CONCLUSION] Heuristic is consistent.')
+    else:
+        print('[CONCLUSION] Heuristic is not consistent.')
 
 
 if __name__ == '__main__':
@@ -124,8 +198,16 @@ if __name__ == '__main__':
         parser.error('--alg astar requires --h heuristic_descriptor')
 
     initial_state, goal_states, state_dict = generate_state_dict(args.ss)
-    alg_dict = {'bfs': bfs,
-                'ucs': ucs,
-                'astar': astar}
-    alg_dict[args.alg](initial_state, goal_states, state_dict,
-                       args.h, args.check_consistent, args.check_consistent)
+
+    if args.check_consistent:
+        check_consistent(initial_state, state_dict, args.h)
+    elif args.check_optimistic:
+        check_optimistic(goal_states, state_dict, args.h)
+    else:
+        alg_dict = {'bfs': bfs,
+                    'ucs': ucs,
+                    'astar': astar}
+        cost, path, path_len, num_visited = alg_dict[args.alg](
+            initial_state, goal_states, state_dict, args.h)
+        print_output(args.alg, 'yes', num_visited,
+                     path_len, cost, path, args.h)
