@@ -44,12 +44,12 @@ def generate_state_dict(path: str, sort_children: bool = False, sort_nodes: bool
         goal_states = set(path_data[1].split(' '))
         if sort_children:
             state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
-                          for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in sorted(path_data[2:])]}
+                          for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in path_data[2:]]}
         elif sort_nodes:
-            state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
+            state_dict = {k: tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')) if len(v) > 0 else tuple()
                           for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in sorted(path_data[2:])]}
         else:
-            state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
+            state_dict = {k: tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')) if len(v) > 0 else tuple()
                           for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in path_data[2:]]}
         return initial_state, goal_states, state_dict
 
