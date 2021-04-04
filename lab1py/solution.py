@@ -36,13 +36,20 @@ def print_output(alg, found_solution, states_visited, path_length, path_cost, pa
     exit(0)
 
 
-def generate_state_dict(path: str):
+def generate_state_dict(path: str, sort_children: bool = False, sort_nodes: bool = False):
     with open(path, encoding='utf-8') as f:
         path_data = [x.strip() for x in f.readlines() if x[0] != '#']
         initial_state = path_data[0]
         goal_states = set(path_data[1].split(' '))
-        state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
-                      for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in path_data[2:]]}
+        if sort_children:
+            state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
+                          for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in sorted(path_data[2:])]}
+        elif sort_nodes:
+            state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
+                          for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in sorted(path_data[2:])]}
+        else:
+            state_dict = {k: sorted(tuple((y.split(',')[0], float(y.split(',')[1])) for y in v.split(' ')), key=lambda x: x[0]) if len(v) > 0 else tuple()
+                          for k, v in [x.split(': ') if len(x.split(': ')) > 1 else [x[:-1], []] for x in path_data[2:]]}
         return initial_state, goal_states, state_dict
 
 
@@ -78,6 +85,7 @@ def bfs(initial_state: str, goal_states: set, state_dict: dict, *_):
                     initial_state, child_name, parent_dict)
                 print(time.time() - start)
                 return cost, path, len(path), len(visited)
+    exit(1)
 
 
 def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
@@ -104,6 +112,7 @@ def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
                 parent_dict[child_name] = (current_state_name, child_cost)
                 total_cost_dict[child_name] = child_cost + current_state_cost
                 open_list.put((child_cost + current_state_cost, child_name))
+    exit(1)
 
 
 def generate_heuristic_dict(heuristic_path: str):
@@ -143,6 +152,7 @@ def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path
                     total_cost_dict[child_name] = g
                     parent_dict[child_name] = (current_state_name, child_cost)
                     open_list.put((f, child_name))
+    exit(1)
 
 
 def check_optimistic(goal_states, state_dict, heuristic_path):
@@ -172,7 +182,7 @@ def check_consistent(initial_state, state_dict, heuristic_path):
     heuristic_dict = generate_heuristic_dict(heuristic_path)
     print(f'# HEURISTIC-CONSISTENT {heuristic_path}')
     consistent = True
-    for state, children in state_dict:
+    for state, children in state_dict.items():
         for child_name, child_cost in children:
             heuristic_cost_parent = heuristic_dict[state]
             heuristic_cost_child = heuristic_dict[child_name]
@@ -197,7 +207,9 @@ if __name__ == '__main__':
     if args.alg == 'astar' and not args.h:
         parser.error('--alg astar requires --h heuristic_descriptor')
 
-    initial_state, goal_states, state_dict = generate_state_dict(args.ss)
+    initial_state, goal_states, state_dict = generate_state_dict(
+        args.ss, sort_children=True if args.alg == 'bfs' else False,
+        sort_nodes=True if args.check_optimistic or args.check_consistent else False)
 
     if args.check_consistent:
         check_consistent(initial_state, state_dict, args.h)
