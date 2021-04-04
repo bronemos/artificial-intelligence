@@ -60,15 +60,15 @@ def bfs(initial_state: str, goal_states: set, state_dict: dict, *_):
         visited.add(current_state)
         children = state_dict[current_state]
 
-        for child in children:
-            if child[0] not in visited:
-                parent_dict[child[0]] = (current_state, child[1])
-                visited.add(child[0])
-                open_queue.append(child[0])
+        for child_name, child_cost in children:
+            if child_name not in visited:
+                parent_dict[child_name] = (current_state, child_cost)
+                visited.add(child_name)
+                open_queue.append(child_name)
 
-            if child[0] in goal_states:
+            if child_name in goal_states:
                 path, cost = backtrace(
-                    initial_state, child[0], parent_dict)
+                    initial_state, child_name, parent_dict)
                 print(time.time() - start)
                 print_output('BFS', 'yes', len(visited), len(path), cost, path)
 
@@ -81,26 +81,39 @@ def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
     visited = set()
 
     while open_list:
-        current_state = open_list.get()
-        visited.add(current_state)
-        if current_state[1] in goal_states:
-            print('found')
+        current_state_cost, current_state_name = open_list.get()
+        visited.add(current_state_name)
+        if current_state_name in goal_states:
             path, cost = backtrace(
-                initial_state, current_state[1], parent_dict)
+                initial_state, current_state_name, parent_dict)
             print(time.time() - start)
             print_output('UCS', 'yes', len(visited), len(path), cost, path)
 
-        children = state_dict[current_state[1]]
+        children = state_dict[current_state_name]
 
-        for child in children:
-            if (child[0] not in parent_dict or total_cost_dict[child[0]] > current_state[0] + child[1]) and child not in visited:
-                parent_dict[child[0]] = (current_state[1], child[1])
-                total_cost_dict[child[0]] = child[1] + current_state[0]
-                open_list.put((child[1] + current_state[0], child[0]))
+        for child_name, child_cost in children:
+            if (child_name not in parent_dict or total_cost_dict[child_name] > current_state_cost + child_cost) and child_name not in visited:
+                parent_dict[child_name] = (current_state_name, child_cost)
+                total_cost_dict[child_name] = child_cost + current_state_cost
+                open_list.put((child_cost + current_state_cost, child_name))
 
 
-def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic, check_consistent, check_optimistic):
-    pass
+def generate_heuristic_dict(heuristic_path: str):
+    with open(heuristic_path, encoding='utf-8') as f:
+        return {k: float(v) for k, v in [x.split(': ') for x in f.readlines() if x[0] != '#']}
+
+
+def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path: str, check_consistent, check_optimistic):
+    heuristic_dict = generate_heuristic_dict(heuristic_path)
+    open_list = PriorityQueue()
+    open_list.put((0 + heuristic_dict[initial_state], initial_state))
+    visited = set()
+
+    while open_list:
+        current_state = open_list.get()
+        visited.add(current_state[1])
+        if current_state[1] in goal_states:
+            pass
 
 
 if __name__ == '__main__':
