@@ -55,7 +55,7 @@ def generate_state_dict(path: str, sort_children: bool = False, sort_nodes: bool
 
 
 def backtrace(initial_state, goal_state, parent_dict):
-    cost = 0
+    cost = 0.0
     path = [goal_state]
     current_state = goal_state
     while current_state != initial_state:
@@ -165,16 +165,15 @@ def check_optimistic(goal_states, state_dict, heuristic_path):
     optimistic = True
 
     for state in state_dict:
-        if state not in goal_states:
-            real_cost, *_ = ucs(state, goal_states, state_dict)
-            heuristic_cost = heuristic_dict[state]
-            if heuristic_cost <= real_cost:
-                print(
-                    f'[CONDITION]: [OK] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
-            else:
-                print(
-                    f'[CONDITION]: [ERR] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
-                optimistic = False
+        real_cost, *_ = ucs(state, goal_states, state_dict)
+        heuristic_cost = heuristic_dict[state]
+        if heuristic_cost <= real_cost:
+            print(
+                f'[CONDITION]: [OK] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
+        else:
+            print(
+                f'[CONDITION]: [ERR] h({state}) <= h*: {heuristic_cost} <= {real_cost}')
+            optimistic = False
 
     if optimistic:
         print('[CONCLUSION]: Heuristic is optimistic.')
@@ -199,9 +198,9 @@ def check_consistent(state_dict, heuristic_path):
                 consistent = False
 
     if consistent:
-        print('[CONCLUSION] Heuristic is consistent.')
+        print('[CONCLUSION]: Heuristic is consistent.')
     else:
-        print('[CONCLUSION] Heuristic is not consistent.')
+        print('[CONCLUSION]: Heuristic is not consistent.')
 
 
 if __name__ == '__main__':
