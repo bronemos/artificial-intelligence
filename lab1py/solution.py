@@ -1,5 +1,4 @@
 import argparse
-from os import stat
 import time
 from collections import deque
 from queue import PriorityQueue
