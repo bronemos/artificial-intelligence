@@ -202,6 +202,7 @@ def check_consistent(state_dict, heuristic_path):
 
 
 def main():
+    global measure_time
     parser = create_parser()
     args = parser.parse_args()
     measure_time = args.t
