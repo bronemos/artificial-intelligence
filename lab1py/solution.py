@@ -98,7 +98,7 @@ def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
     visited = set()
 
     while open_list:
-        current_state_cost, current_state_name = open_list.get()
+        current_state_cost, current_state_name = open_list.get_nowait()
         visited.add(current_state_name)
 
         if current_state_name in goal_states:
@@ -133,7 +133,7 @@ def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path
     visited = set()
 
     while open_list:
-        current_state_cost, current_state_name = open_list.get()
+        current_state_cost, current_state_name = open_list.get_nowait()
         visited.add(current_state_name)
 
         if current_state_name in goal_states:
@@ -147,8 +147,7 @@ def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path
 
         for child_name, child_cost in children:
             if child_name not in visited:
-                g = current_state_cost - \
-                    heuristic_dict[current_state_name] + child_cost
+                g = total_cost_dict[current_state_name] + child_cost
                 h = heuristic_dict[child_name]
                 f = max(total_cost_dict[current_state_name] +
                         heuristic_dict[current_state_name], g + h)
