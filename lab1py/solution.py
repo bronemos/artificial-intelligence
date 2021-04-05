@@ -34,7 +34,6 @@ def print_output(alg, found_solution, states_visited, path_length, path_cost, pa
           f'[PATH_LENGTH]: {path_length}\n'
           f'[TOTAL_COST]: {path_cost}\n'
           f'[PATH]: {" => ".join(path)}')
-    exit(0)
 
 
 def generate_state_dict(path: str, sort_children: bool = False, sort_nodes: bool = False):
@@ -202,7 +201,7 @@ def check_consistent(state_dict, heuristic_path):
         print('[CONCLUSION]: Heuristic is not consistent.')
 
 
-if __name__ == '__main__':
+def main():
     parser = create_parser()
     args = parser.parse_args()
     measure_time = args.t
@@ -226,3 +225,7 @@ if __name__ == '__main__':
             initial_state, goal_states, state_dict, args.h)
         print_output(args.alg, 'yes', num_visited,
                      path_len, cost, path, args.h)
+
+
+if __name__ == '__main__':
+    exit(main())
