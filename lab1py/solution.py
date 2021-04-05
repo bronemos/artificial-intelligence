@@ -150,7 +150,11 @@ def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path
                 g = current_state_cost - \
                     heuristic_dict[current_state_name] + child_cost
                 h = heuristic_dict[child_name]
-                f = g + h
+                if current_state_name in total_cost_dict:
+                    f = max(total_cost_dict[current_state_name] +
+                            heuristic_dict[current_state_name], g + h)
+                else:
+                    f = g + h
 
                 if child_name not in total_cost_dict or g < total_cost_dict[child_name]:
                     total_cost_dict[child_name] = g
