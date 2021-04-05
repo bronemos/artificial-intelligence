@@ -1,7 +1,7 @@
 import argparse
 import time
 from collections import deque
-from queue import PriorityQueue
+import heapq
 
 start = time.time()
 measure_time = False
@@ -91,14 +91,13 @@ def bfs(initial_state: str, goal_states: set, state_dict: dict, *_):
 
 
 def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
-    open_list = PriorityQueue()
-    open_list.put((0, initial_state))
+    open_list = [(0, initial_state)]
     parent_dict = dict()
     total_cost_dict = dict()
     visited = set()
 
     while open_list:
-        current_state_cost, current_state_name = open_list.get_nowait()
+        current_state_cost, current_state_name = heapq.heappop(open_list)
         visited.add(current_state_name)
 
         if current_state_name in goal_states:
@@ -114,7 +113,8 @@ def ucs(initial_state: str, goal_states: set, state_dict: dict, *_):
             if (child_name not in parent_dict or total_cost_dict[child_name] > current_state_cost + child_cost) and child_name not in visited:
                 parent_dict[child_name] = (current_state_name, child_cost)
                 total_cost_dict[child_name] = child_cost + current_state_cost
-                open_list.put((child_cost + current_state_cost, child_name))
+                heapq.heappush(
+                    open_list, (child_cost + current_state_cost, child_name))
     exit(1)
 
 
@@ -126,14 +126,13 @@ def generate_heuristic_dict(heuristic_path: str):
 def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path: str):
     heuristic_dict = generate_heuristic_dict(heuristic_path)
 
-    open_list = PriorityQueue()
-    open_list.put((0 + heuristic_dict[initial_state], initial_state))
+    open_list = [(0 + heuristic_dict[initial_state], initial_state)]
     parent_dict = dict()
     total_cost_dict = {initial_state: 0}
     visited = set()
 
     while open_list:
-        current_state_cost, current_state_name = open_list.get_nowait()
+        current_state_cost, current_state_name = heapq.heappop(open_list)
         visited.add(current_state_name)
 
         if current_state_name in goal_states:
@@ -155,7 +154,7 @@ def astar(initial_state: str, goal_states: set, state_dict: dict, heuristic_path
                 if child_name not in total_cost_dict or g < total_cost_dict[child_name]:
                     total_cost_dict[child_name] = g
                     parent_dict[child_name] = (current_state_name, child_cost)
-                    open_list.put((f, child_name))
+                    heapq.heappush(open_list, (f, child_name))
     exit(1)
 
 
