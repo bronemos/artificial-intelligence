@@ -5,8 +5,7 @@ from itertools import combinations
 def parse_input_resolution(clauses_path: str):
     try:
         with open(clauses_path, 'r', encoding='utf-8') as f:
-            lines = [frozenset(x.strip().lower().split(' v '))
-                     for x in f.readlines() if x[0] != '#']
+            lines = [x.strip().lower() for x in f.readlines() if x[0] != '#']
             clauses = set(enumerate(lines[:-1], start=1))
             goal_clause = lines[-1]
             return clauses, goal_clause
