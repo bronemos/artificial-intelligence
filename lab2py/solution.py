@@ -138,7 +138,7 @@ def print_resolution(
         )
         print("=" * 15)
         print(
-            f'[CONCLUSION]: {" v ".join([literal if state else f"~{literal}" for literal, state in goal_clause])} is unknown'
+            f'[CONCLUSION]: {" v ".join([literal if state else f"~{literal}" for literal, state in [x for fs in goal_clause for x in fs]])} is unknown'
         )
     else:
         resolution_list, splitter = get_resolution_list(
