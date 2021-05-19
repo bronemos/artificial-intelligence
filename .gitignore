@@ -1,6 +1,4 @@
 .vscode
-lab1_files
-autograder
+autograder*
 *.zip
-lab2_files
-autograder_lab2
+*_files
