@@ -2,7 +2,7 @@ import sys
 from math import log2
 from collections import Counter, defaultdict
 from copy import deepcopy
-from typing import List
+from typing import List, Tuple, Dict
 
 
 class Node:
@@ -23,7 +23,7 @@ class Node:
         return self.__chil_dict
 
 
-def dfs_print_tree(root: Node, depth=1, path=""):
+def dfs_print_tree(root: Node, depth=1, path="") -> None:
     if root.child_dict is None:
         print(path + f"{root.x}")
         return
@@ -32,11 +32,12 @@ def dfs_print_tree(root: Node, depth=1, path=""):
 
 
 class ID3:
-    def __init__(self, depth=None, verbose=False):
+    def __init__(self, max_depth: int = -1, verbose: bool = False) -> None:
+        self.__max_depth = max_depth
         self.__verbose = verbose
         self.__root: Node = None
 
-    def __validation_print(self, features: List, entropies: List):
+    def __validation_print(self, features: List, entropies: List) -> None:
         print(
             " ".join(
                 [
@@ -46,7 +47,7 @@ class ID3:
             )
         )
 
-    def __calculate_entropy(self, outcomes: List[int]):
+    def __calculate_entropy(self, outcomes: List[int]) -> float:
         return -sum(
             [
                 float(x) / sum(outcomes) * log2(float(x) / sum(outcomes))
@@ -54,7 +55,7 @@ class ID3:
             ]
         )
 
-    def __filter_by_v(self, d: dict, y: str, v: str):
+    def __filter_by_v(self, d: dict, y: str, v: str) -> dict:
         return_d = deepcopy(d)
         to_remove = set()
         for key in return_d.keys():
@@ -69,7 +70,7 @@ class ID3:
             ]
         return return_d
 
-    def __ig(self, d: dict, x: str):
+    def __ig(self, d: dict, x: str) -> float:
         outcomes = [count for _, count in Counter(d[list(d.keys())[-1]]).most_common()]
         init_dataset_entropy = self.__calculate_entropy(outcomes)
         outcomes_filtered = defaultdict(list)
@@ -89,20 +90,22 @@ class ID3:
         )
         return init_dataset_entropy - expected_entropy
 
-    def __id3(self, d: dict, d_parent: dict, features: List, y: List):
-        if len(d) == 1:
-            v = sorted(Counter(d_parent[y]).most_common(), key=lambda x: (x[1], x[0]))[
+    def __id3(
+        self, d: dict, d_parent: dict, features: List, y: str, current_depth: int
+    ) -> Node:
+        if len(d) == 0:
+            v = sorted(Counter(d_parent[y]).most_common(), key=lambda x: (-x[1], x[0]))[
                 0
             ][0]
             return Node(v, v)
-        v = sorted(Counter(d[y]).most_common(), key=lambda x: (x[1], x[0]))[0][0]
+        v = sorted(Counter(d[y]).most_common(), key=lambda x: (-x[1], x[0]))[0][0]
         d_yv = self.__filter_by_v(d, y, v)
-        if len(features) == 1 or d == d_yv:
+        if len(features) == 0 or d == d_yv or current_depth == self.__max_depth:
             return Node(v, v)
-        entropies = [self.__ig(d, x) for x in features[:-1]]
+        entropies = [self.__ig(d, x) for x in features]
 
         if self.__verbose:
-            self.__validation_print(features[:-1], entropies)
+            self.__validation_print(features, entropies)
 
         max_entropy = max(entropies)
         max_index = entropies.index(max_entropy)
@@ -111,41 +114,54 @@ class ID3:
         for value in set(d[x]):
             d_xv = self.__filter_by_v(d, x, value)
             d_copy = deepcopy(d)
-            d_copy.pop(x)
             d_xv.pop(x)
             feautres_next = deepcopy(features)
             feautres_next.remove(x)
-            t = self.__id3(d_xv, d_copy, feautres_next, y)
+            t = self.__id3(d_xv, d_copy, feautres_next, y, current_depth + 1)
             subtrees[value] = t
         return Node(x, v, subtrees)
 
-    def print_tree(self):
+    def print_tree(self) -> None:
+        print("[BRANCHES]:")
         dfs_print_tree(self.__root)
 
-    def fit(self, train_dataset: dict):
+    def fit(self, train_dataset: dict) -> None:
         self.__root = self.__id3(
             train_dataset,
             train_dataset,
-            list(train_dataset.keys()),
+            sorted(list(train_dataset.keys())[:-1]),
             list(train_dataset.keys())[-1],
+            0,
         )
 
-    def predict(self, test_dataset: dict):
+    def predict(self, test_dataset: dict) -> None:
         predictions = list()
-        for test_no in range(len(test_dataset[list(test_dataset.keys())[-1]])):
+        goal_column = list(test_dataset.keys())[-1]
+        for test_no in range(len(test_dataset[goal_column])):
             curr_node = self.__root
-            while curr_node.child_dict is not None:
+            while type(curr_node) != str and curr_node.child_dict is not None:
                 curr_node = curr_node.child_dict[test_dataset[curr_node.x][test_no]]
-                if type(curr_node) == str:
-                    break
-            if type(curr_node) == str:
-                predictions.append(curr_node)
-            else:
-                predictions.append(curr_node.x)
+            predictions.append(curr_node if type(curr_node) == str else curr_node.x)
         print(f"[PREDICTIONS]: {' '.join(predictions)}")
+        print(
+            f"[ACCURACY]: {float(sum([1 for predicted, correct in zip(predictions, test_dataset[goal_column]) if predicted == correct]))/len(predictions):.5f}"
+        )
+
+        classes = sorted(set(predictions) | set(test_dataset[goal_column]))
+        cm_dim = len(set(predictions) | set(test_dataset[goal_column]))
+        confusion_matrix = [[0 for _ in range(cm_dim)] for _ in range(cm_dim)]
+        for predicted, correct in zip(predictions, test_dataset[goal_column]):
+            confusion_matrix[classes.index(correct)][classes.index(predicted)] += 1
+        confusion_matrix_str = "\n".join(
+            [
+                " ".join([str(confusion_matrix[y][x]) for x in range(cm_dim)])
+                for y in range(cm_dim)
+            ]
+        )
+        print(f"[CONFUSION_MATRIX]:\n{confusion_matrix_str}")
 
 
-def load_data(train_path, test_path):
+def load_data(train_path: str, test_path: str) -> Tuple[Dict]:
     with open(train_path, "r", encoding="utf-8") as f:
         lines = [x.strip().split(",") for x in f.readlines()]
         train_dataset = dict()
@@ -163,7 +179,11 @@ def load_data(train_path, test_path):
 
 def main():
     train_dataset, test_dataset = load_data(sys.argv[1], sys.argv[2])
-    model = ID3(verbose=True)
+    try:
+        depth = int(sys.argv[3])
+    except IndexError:
+        depth = -1
+    model = ID3(max_depth=depth, verbose=True)
     model.fit(train_dataset)
     model.print_tree()
     model.predict(test_dataset)
