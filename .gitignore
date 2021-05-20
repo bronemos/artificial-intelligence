@@ -2,3 +2,4 @@
 autograder*
 *.zip
 *_files
+test.py
